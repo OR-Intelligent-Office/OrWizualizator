@@ -15,11 +15,18 @@ import com.pawlowski.orwizualizator.models.*
 fun EnvironmentVisualizer(api: EnvironmentApi) {
     var state by remember { mutableStateOf<EnvironmentState?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
+    var alerts by remember { mutableStateOf<List<Alert>>(emptyList()) }
 
     LaunchedEffect(Unit) {
         api.observeEnvironmentState().collect { newState ->
             state = newState
             error = null
+        }
+    }
+    
+    LaunchedEffect(Unit) {
+        api.observeAlerts().collect { newAlerts ->
+            alerts = newAlerts
         }
     }
 
@@ -68,6 +75,11 @@ fun EnvironmentVisualizer(api: EnvironmentApi) {
                             color = MaterialTheme.colorScheme.onErrorContainer
                         )
                     }
+                }
+
+                // Alerts section
+                if (alerts.isNotEmpty()) {
+                    AlertsSection(alerts, modifier = Modifier.padding(bottom = 16.dp))
                 }
 
                 // Rooms list
@@ -208,11 +220,7 @@ fun RoomCard(room: Room, modifier: Modifier = Modifier) {
 
             // Printer
             room.printer?.let { printer ->
-                DeviceRow(
-                    name = "Drukarka ${printer.id}",
-                    state = printer.state,
-                    details = "Toner: ${printer.tonerLevel}%, Papier: ${printer.paperLevel}%"
-                )
+                PrinterDeviceRow(printer = printer)
             }
 
             // Blinds
@@ -249,6 +257,61 @@ fun DeviceRow(name: String, state: DeviceState, details: String) {
 }
 
 @Composable
+fun PrinterDeviceRow(printer: PrinterDevice) {
+    val tonerLow = printer.tonerLevel < 20
+    val paperLow = printer.paperLevel < 15
+    
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "Drukarka ${printer.id}",
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "Toner: ${printer.tonerLevel}%",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (tonerLow) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(end = 4.dp)
+                    )
+                    if (tonerLow) {
+                        Text(
+                            text = "⚠️",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(end = 8.dp)
+                        )
+                    }
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "Papier: ${printer.paperLevel}%",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (paperLow) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (paperLow) {
+                        Text(
+                            text = "⚠️",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(start = 4.dp)
+                        )
+                    }
+                }
+            }
+        }
+        DeviceStateBadge(printer.state)
+    }
+}
+
+@Composable
 fun DeviceStateBadge(state: DeviceState) {
     val (text, color) = when (state) {
         DeviceState.ON -> "ON" to MaterialTheme.colorScheme.primary
@@ -266,6 +329,101 @@ fun DeviceStateBadge(state: DeviceState) {
             color = color,
             style = MaterialTheme.typography.labelMedium
         )
+    }
+}
+
+@Composable
+fun AlertsSection(alerts: List<Alert>, modifier: Modifier = Modifier) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "⚠️ Alerty",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Badge(
+                    containerColor = when {
+                        alerts.any { it.severity == "error" } -> MaterialTheme.colorScheme.error
+                        alerts.any { it.severity == "warning" } -> MaterialTheme.colorScheme.primary
+                        else -> MaterialTheme.colorScheme.secondary
+                    }
+                ) {
+                    Text("${alerts.size}")
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            // Show only recent alerts (last 5)
+            alerts.takeLast(5).forEach { alert ->
+                AlertCard(alert, modifier = Modifier.padding(bottom = 8.dp))
+            }
+        }
+    }
+}
+
+@Composable
+fun AlertCard(alert: Alert, modifier: Modifier = Modifier) {
+    val (icon, color, containerColor) = when (alert.severity) {
+        "error" -> Triple("🔴", MaterialTheme.colorScheme.error, MaterialTheme.colorScheme.errorContainer)
+        "warning" -> Triple("🟡", MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.primaryContainer)
+        else -> Triple("ℹ️", MaterialTheme.colorScheme.secondary, MaterialTheme.colorScheme.secondaryContainer)
+    }
+    
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = containerColor
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = icon,
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(end = 8.dp)
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = alert.message,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = color
+                    )
+                    if (alert.roomName != null) {
+                        Text(
+                            text = alert.roomName,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+            Text(
+                text = alert.timestamp.substring(11, 16), // HH:mm
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 

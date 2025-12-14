@@ -84,3 +84,15 @@ data class EnvironmentState(
     val daylightIntensity: Double = 1.0 // 0.0-1.0
 )
 
+@Serializable
+data class Alert(
+    val id: String,
+    val type: String, // "low_toner", "low_paper", "printer_failure", etc.
+    val printerId: String,
+    val roomId: String?,
+    val roomName: String?,
+    val message: String,
+    val timestamp: String,
+    val severity: String = "warning" // "info", "warning", "error"
+)
+

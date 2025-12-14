@@ -187,7 +187,7 @@ fun RoomCard(room: Room, modifier: Modifier = Modifier) {
             }
 
             Spacer(modifier = Modifier.height(12.dp))
-            Divider()
+            HorizontalDivider()
             Spacer(modifier = Modifier.height(12.dp))
 
             // Devices
@@ -222,6 +222,23 @@ fun RoomCard(room: Room, modifier: Modifier = Modifier) {
                     state = if (blinds.state == BlindState.OPEN) DeviceState.ON else DeviceState.OFF,
                     details = if (blinds.state == BlindState.OPEN) "Otwarte" else "Zamknięte"
                 )
+            }
+
+            // Scheduled meetings
+            if (room.scheduledMeetings.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(12.dp))
+                HorizontalDivider()
+                Spacer(modifier = Modifier.height(12.dp))
+                
+                Text(
+                    text = "Zaplanowane spotkania:",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                
+                room.scheduledMeetings.forEach { meeting ->
+                    MeetingRow(meeting)
+                }
             }
         }
     }
@@ -266,6 +283,66 @@ fun DeviceStateBadge(state: DeviceState) {
             color = color,
             style = MaterialTheme.typography.labelMedium
         )
+    }
+}
+
+@Composable
+fun MeetingRow(meeting: Meeting) {
+    // Parse time strings to extract readable time
+    fun formatTime(timeString: String): String {
+        // Format: "2024-01-01T14:30:00" -> "14:30"
+        return try {
+            val parts = timeString.split("T")
+            if (parts.size >= 2) {
+                val timePart = parts[1]
+                timePart.substring(0, 5) // "HH:MM"
+            } else {
+                timeString
+            }
+        } catch (e: Exception) {
+            timeString
+        }
+    }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = meeting.title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+                Text(
+                    text = "${formatTime(meeting.startTime)} - ${formatTime(meeting.endTime)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                )
+            }
+            Surface(
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                shape = MaterialTheme.shapes.small
+            ) {
+                Text(
+                    text = "30 min",
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.labelSmall
+                )
+            }
+        }
     }
 }
 

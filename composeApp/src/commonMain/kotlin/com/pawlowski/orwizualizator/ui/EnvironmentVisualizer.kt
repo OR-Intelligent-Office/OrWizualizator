@@ -358,7 +358,7 @@ fun AlertsSection(alerts: List<Alert>, modifier: Modifier = Modifier) {
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(8.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -366,7 +366,7 @@ fun AlertsSection(alerts: List<Alert>, modifier: Modifier = Modifier) {
             ) {
                 Text(
                     text = "⚠️ Alerty",
-                    style = MaterialTheme.typography.titleLarge,
+                    style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Badge(
@@ -376,15 +376,15 @@ fun AlertsSection(alerts: List<Alert>, modifier: Modifier = Modifier) {
                         else -> MaterialTheme.colorScheme.secondary
                     }
                 ) {
-                    Text("${alerts.size}")
+                    Text("${alerts.size}", style = MaterialTheme.typography.labelSmall)
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
             // Show only recent alerts (last 5)
-            alerts.takeLast(5).forEach { alert ->
-                AlertCard(alert, modifier = Modifier.padding(bottom = 8.dp))
+            alerts.takeLast(3).forEach { alert ->
+                AlertCard(alert, modifier = Modifier.padding(bottom = 4.dp))
             }
         }
     }
@@ -407,7 +407,7 @@ fun AlertCard(alert: Alert, modifier: Modifier = Modifier) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
+                .padding(horizontal = 8.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -417,19 +417,20 @@ fun AlertCard(alert: Alert, modifier: Modifier = Modifier) {
             ) {
                 Text(
                     text = icon,
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(end = 8.dp)
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(end = 6.dp)
                 )
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = alert.message,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = color
+                        style = MaterialTheme.typography.bodySmall,
+                        color = color,
+                        maxLines = 1
                     )
                     if (alert.roomName != null) {
                         Text(
                             text = alert.roomName,
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -437,7 +438,7 @@ fun AlertCard(alert: Alert, modifier: Modifier = Modifier) {
             }
             Text(
                 text = alert.timestamp.substring(11, 16), // HH:mm
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }

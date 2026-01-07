@@ -21,6 +21,12 @@ class EnvironmentApi(
         emptyList<Alert>()
     }
 
+    suspend fun getRoomHeating(roomId: String): RoomHeatingResponse? = try {
+        client.get("$baseUrl/api/environment/heating/rooms/$roomId").body()
+    } catch (e: Exception) {
+        null
+    }
+
     fun observeEnvironmentState(intervalSeconds: Long = 1): Flow<EnvironmentState> =
         flow {
             while (true) {

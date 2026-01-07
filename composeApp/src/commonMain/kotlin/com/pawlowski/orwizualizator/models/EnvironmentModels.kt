@@ -96,3 +96,9 @@ data class Alert(
     val severity: String = "warning" // "info", "warning", "error"
 )
 
+@Serializable
+data class RoomHeatingResponse(
+    val roomId: String,
+    val isHeating: Boolean
+)
+

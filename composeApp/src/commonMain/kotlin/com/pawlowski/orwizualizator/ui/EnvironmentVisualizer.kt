@@ -94,7 +94,7 @@ fun EnvironmentVisualizer(api: EnvironmentApi) {
 
                     // Rooms list
                     if (state != null) {
-                        RoomsList(state!!.rooms)
+                        RoomsList(state!!.rooms, api)
                     }
                 }
                 
@@ -147,20 +147,31 @@ fun StatusBar(state: EnvironmentState) {
 }
 
 @Composable
-fun RoomsList(rooms: List<Room>) {
+fun RoomsList(rooms: List<Room>, api: EnvironmentApi) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
     ) {
         rooms.forEach { room ->
-            RoomCard(room, modifier = Modifier.padding(bottom = 16.dp))
+            RoomCard(room, api = api, modifier = Modifier.padding(bottom = 16.dp))
         }
     }
 }
 
 @Composable
-fun RoomCard(room: Room, modifier: Modifier = Modifier) {
+fun RoomCard(room: Room, api: EnvironmentApi, modifier: Modifier = Modifier) {
+    var isHeating by remember { mutableStateOf<Boolean?>(null) }
+
+    LaunchedEffect(room.id) {
+        while (true) {
+            api.getRoomHeating(room.id)?.let { response ->
+                isHeating = response.isHeating
+            }
+            kotlinx.coroutines.delay(1000) // Aktualizuj co sekundę
+        }
+    }
+
     Card(
         modifier = modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
@@ -200,6 +211,21 @@ fun RoomCard(room: Room, modifier: Modifier = Modifier) {
                         else -> MaterialTheme.colorScheme.primary
                     }
                 )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Heating
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("Ogrzewanie:", style = MaterialTheme.typography.bodyMedium)
+                when (isHeating) {
+                    true -> Text("✓ Włączone", color = MaterialTheme.colorScheme.primary)
+                    false -> Text("✗ Wyłączone", color = MaterialTheme.colorScheme.outline)
+                    null -> Text("...", color = MaterialTheme.colorScheme.outline)
+                }
             }
 
             Spacer(modifier = Modifier.height(8.dp))

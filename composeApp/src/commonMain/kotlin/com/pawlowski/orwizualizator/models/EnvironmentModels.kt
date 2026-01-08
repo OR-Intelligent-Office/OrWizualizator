@@ -117,3 +117,9 @@ data class AgentMessage(
     val context: Map<String, String>? = null
 )
 
+@Serializable
+data class RoomHeatingResponse(
+    val roomId: String,
+    val isHeating: Boolean
+)
+

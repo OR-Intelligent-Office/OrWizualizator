@@ -16,6 +16,7 @@ fun EnvironmentVisualizer(api: EnvironmentApi) {
     var state by remember { mutableStateOf<EnvironmentState?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var alerts by remember { mutableStateOf<List<Alert>>(emptyList()) }
+    var messages by remember { mutableStateOf<List<AgentMessage>>(emptyList()) }
 
     LaunchedEffect(Unit) {
         api.observeEnvironmentState().collect { newState ->
@@ -29,63 +30,81 @@ fun EnvironmentVisualizer(api: EnvironmentApi) {
             alerts = newAlerts
         }
     }
+    
+    LaunchedEffect(Unit) {
+        api.observeMessages().collect { newMessages ->
+            messages = newMessages
+        }
+    }
 
     MaterialTheme {
         Surface(
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp)
-            ) {
-                // Header
-                Text(
-                    text = "Symulator Inteligentnego Biura",
-                    style = MaterialTheme.typography.headlineLarge,
-                    modifier = Modifier.padding(bottom = 16.dp)
+            Row(modifier = Modifier.fillMaxSize()) {
+                // Główny panel (70%)
+                Column(
+                    modifier = Modifier
+                        .weight(0.7f)
+                        .fillMaxHeight()
+                        .padding(16.dp)
+                ) {
+                    // Header
+                    Text(
+                        text = "Symulator Inteligentnego Biura",
+                        style = MaterialTheme.typography.headlineLarge,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+
+                    // Status bar
+                    if (state != null) {
+                        StatusBar(state!!)
+                    } else {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            CircularProgressIndicator()
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Ładowanie danych...")
+                        }
+                    }
+
+                    if (error != null) {
+                        Card(
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.errorContainer
+                            )
+                        ) {
+                            Text(
+                                text = "Błąd: $error",
+                                modifier = Modifier.padding(16.dp),
+                                color = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                        }
+                    }
+
+                    // Alerts section
+                    if (alerts.isNotEmpty()) {
+                        AlertsSection(alerts, modifier = Modifier.padding(bottom = 16.dp))
+                    }
+
+                    // Rooms list
+                    if (state != null) {
+                        RoomsList(state!!.rooms)
+                    }
+                }
+                
+                // Panel boczny z wiadomościami (30%)
+                MessagesPanel(
+                    messages = messages,
+                    modifier = Modifier
+                        .weight(0.3f)
+                        .fillMaxHeight()
                 )
-
-                // Status bar
-                if (state != null) {
-                    StatusBar(state!!)
-                } else {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        CircularProgressIndicator()
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Ładowanie danych...")
-                    }
-                }
-
-                if (error != null) {
-                    Card(
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.errorContainer
-                        )
-                    ) {
-                        Text(
-                            text = "Błąd: $error",
-                            modifier = Modifier.padding(16.dp),
-                            color = MaterialTheme.colorScheme.onErrorContainer
-                        )
-                    }
-                }
-
-                // Alerts section
-                if (alerts.isNotEmpty()) {
-                    AlertsSection(alerts, modifier = Modifier.padding(bottom = 16.dp))
-                }
-
-                // Rooms list
-                if (state != null) {
-                    RoomsList(state!!.rooms)
-                }
             }
         }
     }
@@ -500,6 +519,183 @@ fun MeetingRow(meeting: Meeting) {
                     color = MaterialTheme.colorScheme.primary,
                     style = MaterialTheme.typography.labelSmall
                 )
+            }
+        }
+    }
+}
+
+// =============== PANEL WIADOMOŚCI AGENTÓW ===============
+
+@Composable
+fun MessagesPanel(messages: List<AgentMessage>, modifier: Modifier = Modifier) {
+    Card(
+        modifier = modifier.padding(top = 16.dp, end = 16.dp, bottom = 16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(12.dp)
+        ) {
+            // Header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "💬 Komunikacja Agentów",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                if (messages.isNotEmpty()) {
+                    Badge(containerColor = MaterialTheme.colorScheme.primary) {
+                        Text("${messages.size}", style = MaterialTheme.typography.labelSmall)
+                    }
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            if (messages.isEmpty()) {
+                // Pusty stan
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "🤖",
+                        style = MaterialTheme.typography.displayMedium
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Brak wiadomości",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    )
+                    Text(
+                        text = "Agenci nie wysłali jeszcze żadnych komunikatów",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                    )
+                }
+            } else {
+                // Lista wiadomości (od najnowszych)
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    messages.reversed().forEach { message ->
+                        MessageCard(message)
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun MessageCard(message: AgentMessage) {
+    val (icon, containerColor) = when (message.type) {
+        MessageType.REQUEST -> "📨" to MaterialTheme.colorScheme.primaryContainer
+        MessageType.INFORM -> "ℹ️" to MaterialTheme.colorScheme.secondaryContainer
+        MessageType.QUERY -> "❓" to MaterialTheme.colorScheme.tertiaryContainer
+        MessageType.RESPONSE -> "✅" to MaterialTheme.colorScheme.surfaceVariant
+    }
+    
+    fun formatAgentName(name: String): String {
+        return name
+            .replace("_agent", "")
+            .replace("_", " ")
+            .replaceFirstChar { it.uppercase() }
+    }
+    
+    fun formatTime(timestamp: String): String {
+        return try {
+            if (timestamp.length >= 16) {
+                timestamp.substring(11, 16)
+            } else timestamp
+        } catch (e: Exception) {
+            timestamp
+        }
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(modifier = Modifier.padding(10.dp)) {
+            // Header: from -> to, czas
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(text = icon, style = MaterialTheme.typography.bodyMedium)
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = formatAgentName(message.from),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = " → ",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = if (message.to == "broadcast") "Wszyscy" else formatAgentName(message.to),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                }
+                Text(
+                    text = formatTime(message.timestamp),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(6.dp))
+            
+            // Treść wiadomości
+            Text(
+                text = message.content,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            
+            // Kontekst (jeśli jest)
+            if (!message.context.isNullOrEmpty()) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    message.context.entries.take(3).forEach { (key, value) ->
+                        Surface(
+                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
+                            shape = MaterialTheme.shapes.extraSmall
+                        ) {
+                            Text(
+                                text = "$key: $value",
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
             }
         }
     }

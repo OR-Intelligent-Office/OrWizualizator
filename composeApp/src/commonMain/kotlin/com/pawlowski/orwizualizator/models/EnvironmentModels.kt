@@ -88,11 +88,32 @@ data class EnvironmentState(
 data class Alert(
     val id: String,
     val type: String, // "low_toner", "low_paper", "printer_failure", etc.
-    val printerId: String,
+    val printerId: String? = null,
+    val lightId: String? = null,
     val roomId: String?,
     val roomName: String?,
     val message: String,
     val timestamp: String,
     val severity: String = "warning" // "info", "warning", "error"
+)
+
+// Komunikacja NL między agentami
+@Serializable
+enum class MessageType {
+    REQUEST,   // Prośba o akcję
+    INFORM,    // Informacja
+    QUERY,     // Zapytanie
+    RESPONSE   // Odpowiedź
+}
+
+@Serializable
+data class AgentMessage(
+    val id: String,
+    val from: String,       // "heating_agent", "printer_agent_208", etc.
+    val to: String,         // "heating_agent", "blinds_agent", "broadcast", etc.
+    val type: MessageType,
+    val content: String,    // Tekst w języku naturalnym
+    val timestamp: String,
+    val context: Map<String, String>? = null
 )
 

@@ -20,6 +20,12 @@ class EnvironmentApi(
     } catch (e: Exception) {
         emptyList<Alert>()
     }
+    
+    suspend fun getMessages(): List<AgentMessage> = try {
+        client.get("$baseUrl/api/environment/agents/messages").body()
+    } catch (e: Exception) {
+        emptyList<AgentMessage>()
+    }
 
     fun observeEnvironmentState(intervalSeconds: Long = 1): Flow<EnvironmentState> =
         flow {
@@ -41,6 +47,18 @@ class EnvironmentApi(
                     emit(getAlerts())
                 } catch (e: Exception) {
                     emit(emptyList<Alert>())
+                }
+                kotlinx.coroutines.delay(intervalSeconds * 1000)
+            }
+        }
+    
+    fun observeMessages(intervalSeconds: Long = 2): Flow<List<AgentMessage>> =
+        flow {
+            while (true) {
+                try {
+                    emit(getMessages())
+                } catch (e: Exception) {
+                    emit(emptyList<AgentMessage>())
                 }
                 kotlinx.coroutines.delay(intervalSeconds * 1000)
             }

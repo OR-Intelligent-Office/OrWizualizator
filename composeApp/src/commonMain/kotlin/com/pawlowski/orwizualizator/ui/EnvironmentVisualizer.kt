@@ -139,7 +139,7 @@ fun StatusBar(state: EnvironmentState) {
             }
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = "Światło dzienne: ${(state.daylightIntensity * 100).toInt()}%",
+                text = "Światło zewnętrzne: ${(state.externalLightLux).toInt()} lux",
                 style = MaterialTheme.typography.bodySmall
             )
         }
@@ -230,6 +230,25 @@ fun RoomCard(room: Room, api: EnvironmentApi, modifier: Modifier = Modifier) {
 
             Spacer(modifier = Modifier.height(8.dp))
 
+            // Illumination
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("Naświetlenie:", style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    text = "${room.illumination.toInt()} lux",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = when {
+                        room.illumination < 300 -> MaterialTheme.colorScheme.error
+                        room.illumination >= 300 -> MaterialTheme.colorScheme.primary
+                        else -> MaterialTheme.colorScheme.outline
+                    }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
             // Motion sensor
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -256,10 +275,16 @@ fun RoomCard(room: Room, api: EnvironmentApi, modifier: Modifier = Modifier) {
 
             // Lights
             room.lights.forEach { light ->
+                val lightLux = if (light.state == DeviceState.ON) {
+                    // Oblicz lux na podstawie brightness (brightness% * 500 lux)
+                    (light.brightness / 100.0) * 500.0
+                } else {
+                    0.0 // Wyłączone światło = 0 lux
+                }
                 DeviceRow(
                     name = "Światło ${light.id}",
                     state = light.state,
-                    details = "Jasność: ${light.brightness}%"
+                    details = "${lightLux.toInt()} lux"
                 )
             }
 
@@ -338,7 +363,7 @@ fun PrinterDeviceRow(printer: PrinterDevice) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = "Toner: ${printer.tonerLevel}%",
+                        text = "Toner: ${printer.tonerLevel} lux",
                         style = MaterialTheme.typography.bodySmall,
                         color = if (tonerLow) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(end = 4.dp)
@@ -354,7 +379,7 @@ fun PrinterDeviceRow(printer: PrinterDevice) {
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = "Papier: ${printer.paperLevel}%",
+                        text = "Papier: ${printer.paperLevel} lux",
                         style = MaterialTheme.typography.bodySmall,
                         color = if (paperLow) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -726,4 +751,3 @@ fun MessageCard(message: AgentMessage) {
         }
     }
 }
-

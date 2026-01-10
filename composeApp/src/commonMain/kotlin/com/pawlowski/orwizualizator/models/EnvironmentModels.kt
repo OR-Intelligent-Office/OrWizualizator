@@ -71,7 +71,8 @@ data class Room(
     val temperatureSensor: TemperatureSensor,
     val blinds: BlindsDevice?,
     val peopleCount: Int = 0,
-    val scheduledMeetings: List<Meeting> = emptyList()
+    val scheduledMeetings: List<Meeting> = emptyList(),
+    val illumination: Double = 0.0 // Naświetlenie pokoju w lux
 )
 
 @Serializable
@@ -81,7 +82,7 @@ data class EnvironmentState(
     val externalTemperature: Double,
     val timeSpeedMultiplier: Double = 1.0,
     val powerOutage: Boolean = false,
-    val daylightIntensity: Double = 1.0 // 0.0-1.0
+    val externalLightLux: Double = 0.0 // Światło zewnętrzne w lux (0-10000)
 )
 
 @Serializable
@@ -122,4 +123,3 @@ data class RoomHeatingResponse(
     val roomId: String,
     val isHeating: Boolean
 )
-

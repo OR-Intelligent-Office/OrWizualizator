@@ -240,8 +240,8 @@ fun RoomCard(room: Room, api: EnvironmentApi, modifier: Modifier = Modifier) {
                     text = "${room.illumination.toInt()} lux",
                     style = MaterialTheme.typography.bodyMedium,
                     color = when {
-                        room.illumination < 300 -> MaterialTheme.colorScheme.error
-                        room.illumination >= 300 -> MaterialTheme.colorScheme.primary
+                        room.illumination < 700 -> MaterialTheme.colorScheme.error
+                        room.illumination >= 700 -> MaterialTheme.colorScheme.primary
                         else -> MaterialTheme.colorScheme.outline
                     }
                 )

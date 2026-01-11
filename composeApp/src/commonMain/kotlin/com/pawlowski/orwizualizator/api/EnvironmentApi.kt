@@ -4,6 +4,7 @@ import com.pawlowski.orwizualizator.models.*
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
+import io.ktor.http.*
 import kotlinx.coroutines.flow.*
 
 expect fun createHttpClient(): HttpClient
@@ -25,6 +26,17 @@ class EnvironmentApi(
         client.get("$baseUrl/api/environment/agents/messages").body()
     } catch (e: Exception) {
         emptyList<AgentMessage>()
+    }
+    
+    suspend fun sendMessage(request: AgentMessageRequest): Boolean = try {
+        client.post("$baseUrl/api/environment/agents/messages") {
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }
+        true
+    } catch (e: Exception) {
+        println("Error sending message: ${e.message}")
+        false
     }
 
     suspend fun getRoomHeating(roomId: String): RoomHeatingResponse? = try {

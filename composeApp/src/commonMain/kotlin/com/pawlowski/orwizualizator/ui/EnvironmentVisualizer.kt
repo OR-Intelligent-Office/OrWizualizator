@@ -10,6 +10,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.pawlowski.orwizualizator.api.EnvironmentApi
 import com.pawlowski.orwizualizator.models.*
+import kotlinx.coroutines.launch
+import androidx.compose.material3.ExperimentalMaterial3Api
 
 @Composable
 fun EnvironmentVisualizer(api: EnvironmentApi) {
@@ -101,6 +103,7 @@ fun EnvironmentVisualizer(api: EnvironmentApi) {
                 // Panel boczny z wiadomościami (30%)
                 MessagesPanel(
                     messages = messages,
+                    api = api,
                     modifier = Modifier
                         .weight(0.3f)
                         .fillMaxHeight()
@@ -578,7 +581,7 @@ fun MeetingRow(meeting: Meeting) {
 // =============== PANEL WIADOMOŚCI AGENTÓW ===============
 
 @Composable
-fun MessagesPanel(messages: List<AgentMessage>, modifier: Modifier = Modifier) {
+fun MessagesPanel(messages: List<AgentMessage>, api: EnvironmentApi, modifier: Modifier = Modifier) {
     Card(
         modifier = modifier.padding(top = 16.dp, end = 16.dp, bottom = 16.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
@@ -608,6 +611,13 @@ fun MessagesPanel(messages: List<AgentMessage>, modifier: Modifier = Modifier) {
                     }
                 }
             }
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            // Formularz do wysyłania wiadomości
+            SendMessageForm(api = api)
             
             Spacer(modifier = Modifier.height(12.dp))
             HorizontalDivider()
@@ -647,6 +657,220 @@ fun MessagesPanel(messages: List<AgentMessage>, modifier: Modifier = Modifier) {
                         MessageCard(message)
                         Spacer(modifier = Modifier.height(8.dp))
                     }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SendMessageForm(api: EnvironmentApi) {
+    var selectedAgent by remember { mutableStateOf("light_agent") }
+    var messageText by remember { mutableStateOf("") }
+    var messageType by remember { mutableStateOf(MessageType.INFORM) }
+    var isSending by remember { mutableStateOf(false) }
+    var sendStatus by remember { mutableStateOf<String?>(null) }
+    val coroutineScope = rememberCoroutineScope()
+    
+    val availableAgents = listOf(
+        "HeatingAgent",
+        "LightAgent",
+        "WindowBlindsAgent"
+    )
+    
+    val messageTypes = MessageType.values().toList()
+    
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp)
+        ) {
+            Text(
+                text = "📤 Wyślij wiadomość",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            // Dropdown agentów
+            Text(
+                text = "Do:",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            var expandedAgent by remember { mutableStateOf(false) }
+            ExposedDropdownMenuBox(
+                expanded = expandedAgent,
+                onExpandedChange = { expandedAgent = !expandedAgent }
+            ) {
+                OutlinedTextField(
+                    value = selectedAgent,
+                    onValueChange = {},
+                    readOnly = true,
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedAgent) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor()
+                )
+                ExposedDropdownMenu(
+                    expanded = expandedAgent,
+                    onDismissRequest = { expandedAgent = false }
+                ) {
+                    availableAgents.forEach { agent ->
+                        DropdownMenuItem(
+                            text = { 
+                                Text(
+                                    text = if (agent == "broadcast") "Wszyscy (broadcast)" else agent.replace("_", " ").replaceFirstChar { it.uppercase() }
+                                )
+                            },
+                            onClick = {
+                                selectedAgent = agent
+                                expandedAgent = false
+                            }
+                        )
+                    }
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            // Dropdown typu wiadomości
+            Text(
+                text = "Typ:",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            var expandedType by remember { mutableStateOf(false) }
+            ExposedDropdownMenuBox(
+                expanded = expandedType,
+                onExpandedChange = { expandedType = !expandedType }
+            ) {
+                OutlinedTextField(
+                    value = when (messageType) {
+                        MessageType.REQUEST -> "Prośba (REQUEST)"
+                        MessageType.INFORM -> "Informacja (INFORM)"
+                        MessageType.QUERY -> "Zapytanie (QUERY)"
+                        MessageType.RESPONSE -> "Odpowiedź (RESPONSE)"
+                    },
+                    onValueChange = {},
+                    readOnly = true,
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedType) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor()
+                )
+                ExposedDropdownMenu(
+                    expanded = expandedType,
+                    onDismissRequest = { expandedType = false }
+                ) {
+                    messageTypes.forEach { type ->
+                        DropdownMenuItem(
+                            text = { 
+                                Text(
+                                    text = when (type) {
+                                        MessageType.REQUEST -> "Prośba (REQUEST)"
+                                        MessageType.INFORM -> "Informacja (INFORM)"
+                                        MessageType.QUERY -> "Zapytanie (QUERY)"
+                                        MessageType.RESPONSE -> "Odpowiedź (RESPONSE)"
+                                    }
+                                )
+                            },
+                            onClick = {
+                                messageType = type
+                                expandedType = false
+                            }
+                        )
+                    }
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            // Pole tekstowe wiadomości
+            Text(
+                text = "Wiadomość:",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            OutlinedTextField(
+                value = messageText,
+                onValueChange = { messageText = it },
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("Wpisz wiadomość...") },
+                maxLines = 3,
+                enabled = !isSending
+            )
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            // Status i przycisk wysyłania
+            if (sendStatus != null) {
+                Text(
+                    text = sendStatus!!,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (sendStatus!!.startsWith("✓")) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.error
+                    },
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+            }
+            
+            Button(
+                onClick = {
+                    if (messageText.isNotBlank() && !isSending) {
+                        isSending = true
+                        sendStatus = null
+                        coroutineScope.launch {
+                            try {
+                                val request = AgentMessageRequest(
+                                    from = "user",
+                                    to = selectedAgent,
+                                    type = messageType,
+                                    content = messageText
+                                )
+                                val success = api.sendMessage(request)
+                                sendStatus = if (success) {
+                                    "✓ Wiadomość wysłana"
+                                } else {
+                                    "✗ Błąd wysyłania"
+                                }
+                                if (success) {
+                                    messageText = ""
+                                }
+                            } catch (e: Exception) {
+                                sendStatus = "✗ Błąd: ${e.message}"
+                            } finally {
+                                isSending = false
+                                kotlinx.coroutines.delay(3000)
+                                sendStatus = null
+                            }
+                        }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = messageText.isNotBlank() && !isSending
+            ) {
+                if (isSending) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Wysyłanie...")
+                } else {
+                    Text("Wyślij")
                 }
             }
         }
